@@ -1,4 +1,4 @@
-use crate::logic;
+use crate::logic::{self, nist_api_client::CPEResponse};
 
 pub async fn event_loop() {
     loop {
@@ -21,5 +21,11 @@ async fn parse_user_input(line: &String) {
 
 async fn list_cves(args: &str) {
     println!("Fetching CVEs for cpe={} ...", args);
-    println!("{}", logic::interface::list_cves(&args).await);
+
+    let result = logic::interface::list_cves(&args).await;
+    let result: CPEResponse = serde_json::from_str(&result).unwrap();
+
+    for item in result.vulnerabilities {
+        println!("{}", item.cve.id);
+    }
 }

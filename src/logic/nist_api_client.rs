@@ -3,10 +3,11 @@ const BASE_URL: &str = "https://services.nvd.nist.gov/rest/json/cves/2.0";
 use std::{error::Error, fmt, sync::Arc};
 use serde::{Serialize, Deserialize};
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct CPEResponse {
-    pub vulnerabilities: Vec<CVEContainer>
+    pub vulnerabilities: Vec<CVEContainer>,
+    pub totalResults: u64
 }
 
 #[derive(Serialize, Deserialize)]
@@ -71,9 +72,9 @@ impl NISTAPIClient {
         }
     }
 
-    pub async fn get_cves_from_cpe(&self, cpe: String) -> Result<Vec<CVEContainer>, Box<dyn Error + Send>> {
-        let url = format!("{}?cpeName={}", BASE_URL, urlencoding::encode(&cpe));
-        
+    async fn query_nist(&self, params: String) -> Result<CPEResponse, Box<dyn Error + Send>> {
+        let url = format!("{}?{}", BASE_URL, params);
+
         let response = self.http_client.get(&url).send().await;
     
         let response = match response {
@@ -88,7 +89,19 @@ impl NISTAPIClient {
             Ok(res) => res,
             Err(_) => return Err(Box::new(NISTApiError("Failed to parse response as json".into())))
         };
-        
-        Ok(response.vulnerabilities)
+
+        Ok(response)
+    }
+
+    pub async fn get_cves_from_cpe(&self, cpe: String, amount: u64) -> Result<CPEResponse, Box<dyn Error + Send>> {
+        // this first request is used to get the total amount of CVEs
+        let params = format!("cpeName={}&resultsPerPage=1", urlencoding::encode(&cpe));
+        let response = self.query_nist(params).await?;
+
+        let start_index = response.totalResults - amount;
+        let params = format!("cpeName={}&resultsPerPage={}&startIndex={}", urlencoding::encode(&cpe), amount, start_index);
+        let response = self.query_nist(params).await?;
+
+        Ok(response)
     }
 }
