@@ -4,12 +4,12 @@ use std::error::Error;
 pub mod logic;
 pub mod presentation;
 
-use presentation::console;
+use presentation::telegram;
 
 
 async fn root() -> Result<(), Box<dyn Error>> {
     let join_handle = tokio::spawn(async move {
-        console::event_loop().await;
+        let _ = telegram::event_loop().await;
     });
 
     let _ = join_handle.await;
