@@ -8,10 +8,8 @@ use frankenstein::Message;
 use frankenstein::SendMessageParams;
 use frankenstein::{AsyncApi, UpdateContent};
 
-const TOKEN: &str = "6831371920:AAECvTvFVSwQW0imA-_DZRstrTsN_bjyueA";
-
-pub async fn event_loop() -> Result<&'static str, Box<dyn Error + Send>> {
-    let api = AsyncApi::new(TOKEN);
+pub async fn event_loop(token: &str) -> Result<&'static str, Box<dyn Error + Send>> {
+    let api = AsyncApi::new(token);
     
     match api.get_me().await {
         Ok(response) => {
