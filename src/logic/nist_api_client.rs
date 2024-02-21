@@ -98,7 +98,11 @@ impl NISTAPIClient {
         let params = format!("cpeName={}&resultsPerPage=1", urlencoding::encode(&cpe));
         let response = self.query_nist(params).await?;
 
-        let start_index = response.totalResults - amount;
+        let mut start_index = 0;
+        if amount < response.totalResults {
+            start_index = response.totalResults - amount;    
+        }
+        
         let params = format!("cpeName={}&resultsPerPage={}&startIndex={}", urlencoding::encode(&cpe), amount, start_index);
         let response = self.query_nist(params).await?;
 
