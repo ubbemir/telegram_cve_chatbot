@@ -25,7 +25,7 @@ pub struct CVE {
     pub lastModified: String,
     pub vulnStatus: String,
     pub descriptions: Vec<CVEDetail>,
-    // pub metrics: serde_json::Value
+    pub metrics: CVSSMetricV2Container
 
 }
 
@@ -47,7 +47,10 @@ pub struct CVSSMetricV2Container {
 #[allow(non_snake_case)]
 pub struct CVSSMetricV2 {
     pub source: String,
-    
+    pub baseSeverity: String,
+
+    #[serde(rename = "type")] 
+    pub t: String
 }
 
 #[derive(Debug)]

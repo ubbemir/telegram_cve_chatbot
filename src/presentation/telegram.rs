@@ -83,7 +83,7 @@ async fn list_cves(args: &str, chatid: i64, api: &AsyncApi) {
 
     let mut msg = String::new();
     for item in result.vulnerabilities {
-        msg.push_str(&format!("{}\n", item.cve.id));
+        msg.push_str(&format!("{} - {}\n", item.cve.id, item.cve.metrics.cvssMetricV2[0].baseSeverity));
     }
     send_msg(&msg, chatid, api).await;
 }
