@@ -79,6 +79,13 @@ async fn list_cves(args: &str, chatid: i64, api: &AsyncApi) {
     send_msg(&format!("Fetching CVEs for CPE:\n{} ...", args), chatid, api).await;
 
     let result = logic::interface::list_cves(&args).await;
+    if let Err(e) = result {
+        send_msg(&format!("Failed to retrieve information from NIST, possible that you provided an invalid CPE string. Error: {}", e), chatid, api).await;
+        return;
+    }
+    let result = result.unwrap();
+
+
     let result: CPEResponse = serde_json::from_str(&result).unwrap();
 
     let mut msg = String::new();
