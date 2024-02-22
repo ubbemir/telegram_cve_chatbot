@@ -96,7 +96,14 @@ impl NISTAPIClient {
         Ok(response)
     }
 
-    pub async fn get_cves_from_cpe(&self, cpe: String, amount: u64) -> Result<CPEResponse, Box<dyn Error + Send>> {
+    pub async fn get_cves_from_cpe(&self, cpe: String, limited_results: bool, amount: u64) -> Result<CPEResponse, Box<dyn Error + Send>> {
+        if !limited_results {
+            let params = format!("cpeName={}", urlencoding::encode(&cpe));
+            let response = self.query_nist(params).await?;
+
+            return Ok(response);
+        }
+        
         // this first request is used to get the total amount of CVEs
         let params = format!("cpeName={}&resultsPerPage=1", urlencoding::encode(&cpe));
         let response = self.query_nist(params).await?;
