@@ -39,7 +39,7 @@ pub struct CVEDetail {
 #[derive(Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct CVSSMetricV2Container {
-    pub cvssMetricV2: Vec<CVSSMetricV2>
+    pub cvssMetricV2: Option<Vec<CVSSMetricV2>>
     
 }
 

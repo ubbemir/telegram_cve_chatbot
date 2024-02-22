@@ -29,6 +29,8 @@ async fn root() -> Result<(), Box<dyn Error>> {
         let _ = telegram::event_loop(&token).await;
     });
 
+    println!("{}", logic::interface::cvss_chart("cpe:2.3:o:linux:linux_kernel:5.4.21:*:*:*:*:*:*:*").await.unwrap());
+
     let _ = join_handle.await;
 
     Ok(())
