@@ -132,8 +132,8 @@ async fn send_msg(msg: &str, chatid: i64, api: &AsyncApi) {
     }
 }
 
-async fn send_photo(photo_paf: &str, chatid: i64, api: &AsyncApi) {
-    let file = std::path::PathBuf::from(photo_paf);
+async fn send_photo(photo_path: &str, chatid: i64, api: &AsyncApi) {
+    let file = std::path::PathBuf::from(photo_path);
 
     let params = SendPhotoParams::builder()
         .chat_id(chatid)
