@@ -6,6 +6,7 @@ use frankenstein::AsyncTelegramApi;
 use frankenstein::GetUpdatesParams;
 use frankenstein::Message;
 use frankenstein::SendMessageParams;
+use frankenstein::SendPhotoParams;
 use frankenstein::{AsyncApi, UpdateContent};
 
 pub async fn event_loop(token: &str) -> Result<&'static str, Box<dyn Error + Send>> {
@@ -69,10 +70,19 @@ async fn parse_user_input(line: &str, chatid: i64, api: &AsyncApi) {
     let (command, args) = line.split_once(" ").unwrap_or(("", ""));
     let args = args.trim();
 
+    let mut was_valid = true;
     match command {
         "/list_cves" => list_cves(&args, chatid, api).await,
-        _ => send_msg(&"Invalid command".to_owned(), chatid, api).await
+        "/cvss_graph" => cvss_graph(&args, chatid, api).await,
+        _ => {
+            send_msg(&"Invalid command".to_owned(), chatid, api).await;
+            was_valid = false;
+        }
     };
+
+    if was_valid {
+        println!("Valid command: {}", command);
+    }
 }
 
 async fn list_cves(args: &str, chatid: i64, api: &AsyncApi) {
@@ -97,7 +107,18 @@ async fn list_cves(args: &str, chatid: i64, api: &AsyncApi) {
         
         msg.push_str(&format!("{} - NO METRIC AVAILABLE\n", item.cve.id));
     }
+  
     send_msg(&msg, chatid, api).await;
+}
+
+async fn cvss_graph(args: &str, chatid: i64, api: &AsyncApi) {
+    send_msg(&format!("Creating CVSS score graph for CPE:\n{} ...", args), chatid, api).await;
+
+    let cvss_chart = logic::interface::cvss_chart(args, chatid as u64).await;
+
+    if let Ok(path) = cvss_chart {
+        send_photo(&path, chatid, api).await;
+    }
 }
 
 async fn send_msg(msg: &str, chatid: i64, api: &AsyncApi) {
@@ -107,6 +128,19 @@ async fn send_msg(msg: &str, chatid: i64, api: &AsyncApi) {
         .build();
 
     if let Err(err) = api.send_message(&send_message_params).await {
-        println!("Failed to send message: {err:?}");
+        eprintln!("Failed to send message: {err:?}");
+    }
+}
+
+async fn send_photo(photo_paf: &str, chatid: i64, api: &AsyncApi) {
+    let file = std::path::PathBuf::from(photo_paf);
+
+    let params = SendPhotoParams::builder()
+        .chat_id(chatid)
+        .photo(file)
+        .build();
+
+    if let Err(error) = api.send_photo(&params).await {
+        eprintln!("Failed to upload photo: {error:?}");
     }
 }

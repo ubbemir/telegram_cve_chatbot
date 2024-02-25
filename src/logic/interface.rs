@@ -15,7 +15,7 @@ pub async fn list_cves(arg: &str) -> Result<String, Box<dyn Error + Send>> {
     Ok(result)
 }
 
-pub async fn cvss_chart(arg: &str) -> Result<String, Box<dyn Error + Send>> {
+pub async fn cvss_chart(arg: &str, id: u64) -> Result<String, Box<dyn Error + Send>> {
     let client = NISTAPIClient::new();
     let response = client.get_cves_from_cpe(arg.to_owned(), false, 0).await;
     if let Err(e) = response {
@@ -35,7 +35,7 @@ pub async fn cvss_chart(arg: &str) -> Result<String, Box<dyn Error + Send>> {
             }
         }
     }
-    
-    let chart_file = chart_creator::create_cvss_chart(10, cvss_count)?;
+
+    let chart_file = chart_creator::create_cvss_chart(id, cvss_count)?;
     Ok(chart_file)
 }
