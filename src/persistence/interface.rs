@@ -28,10 +28,10 @@ pub async fn initialize_db() {
     let conn = get_db_connection().lock().await;
 
     let _ = conn.execute(
-        "CREATE TABLE person (
+        "CREATE TABLE subscriptions (
             id    INTEGER PRIMARY KEY,
-            name  TEXT NOT NULL,
-            data  BLOB
+            uid  TEXT NOT NULL,
+            cpe  BLOB
         )",
         (),
     );
