@@ -5,6 +5,7 @@ use std::env;
 
 pub mod logic;
 pub mod presentation;
+pub mod persistence;
 
 use presentation::telegram;
 
@@ -28,6 +29,8 @@ async fn root() -> Result<(), Box<dyn Error>> {
     let join_handle = tokio::spawn(async move {
         let _ = telegram::event_loop(&token).await;
     });
+
+    persistence::interface::initialize_db().await;
 
     let _ = join_handle.await;
 
