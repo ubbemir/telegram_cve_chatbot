@@ -90,10 +90,12 @@ async fn list_cves(args: &str, chatid: i64, api: &AsyncApi) {
 
     let mut msg = String::new();
     for item in result.vulnerabilities {
-        match item.cve.metrics.cvssMetricV2 {
-            Some(metrics) => msg.push_str(&format!("{} - {}\n", item.cve.id, metrics[0].baseSeverity)),
-            _ => msg.push_str(&format!("{} - NO METRIC AVAILABLE\n", item.cve.id))
+        if let Some(severity) = item.cve.get_base_severity() {
+            msg.push_str(&format!("{} - {}\n", item.cve.id, severity));
+            continue;
         }
+        
+        msg.push_str(&format!("{} - NO METRIC AVAILABLE\n", item.cve.id));
     }
     send_msg(&msg, chatid, api).await;
 }

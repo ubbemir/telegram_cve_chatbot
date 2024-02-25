@@ -30,7 +30,7 @@ pub fn create_cvss_chart(id: u64, base_serverity_count: Vec<(&str, u64)>) -> Res
         .y_label_area_size(40)
         .margin(5)
         .caption("CVSS score graph", ("sans-serif", 50.0))
-        .build_cartesian_2d(0u32..3u32, 0u64..max_count).unwrap();
+        .build_cartesian_2d(0u32..4u32, 0u64..max_count).unwrap();
 
     chart
         .configure_mesh()

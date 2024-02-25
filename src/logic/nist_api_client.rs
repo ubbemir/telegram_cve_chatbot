@@ -25,7 +25,7 @@ pub struct CVE {
     pub lastModified: String,
     pub vulnStatus: String,
     pub descriptions: Vec<CVEDetail>,
-    pub metrics: CVSSMetricV2Container
+    pub metrics: CVSSMetricContainer
 
 }
 
@@ -38,9 +38,9 @@ pub struct CVEDetail {
 
 #[derive(Serialize, Deserialize)]
 #[allow(non_snake_case)]
-pub struct CVSSMetricV2Container {
-    pub cvssMetricV2: Option<Vec<CVSSMetricV2>>
-    
+pub struct CVSSMetricContainer {
+    pub cvssMetricV2: Option<Vec<CVSSMetricV2>>,
+    pub cvssMetricV31: Option<Vec<CVSSMetricV31>>
 }
 
 #[derive(Serialize, Deserialize)]
@@ -51,6 +51,23 @@ pub struct CVSSMetricV2 {
 
     #[serde(rename = "type")] 
     pub t: String
+}
+
+#[derive(Serialize, Deserialize)]
+#[allow(non_snake_case)]
+pub struct CVSSMetricV31 {
+    pub source: String,
+    pub cvssData: CVSSV31Data,
+
+    #[serde(rename = "type")] 
+    pub t: String
+}
+
+#[derive(Serialize, Deserialize)]
+#[allow(non_snake_case)]
+pub struct CVSSV31Data {
+    version: String,
+    baseSeverity: String
 }
 
 #[derive(Debug)]
@@ -66,6 +83,20 @@ impl Error for NISTApiError {}
 #[derive(Clone)]
 pub struct NISTAPIClient {
     http_client: Arc<reqwest::Client>
+}
+
+impl CVE {
+    pub fn get_base_severity(&self) -> Option<&String> {
+        if let Some(metrics) = &self.metrics.cvssMetricV31 {
+            return Some(&metrics[0].cvssData.baseSeverity);
+        }
+        
+        if let Some(metrics) = &self.metrics.cvssMetricV2 {
+            return Some(&metrics[0].baseSeverity);
+        }
+
+        None
+    }
 }
 
 impl NISTAPIClient {
