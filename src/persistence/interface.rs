@@ -8,7 +8,7 @@ const DB_FILE_NAME: &str = "db.sqlite3";
 fn get_db_path() -> String {
     let mut exe_path = env::current_exe().unwrap();
     let _ = exe_path.pop();
-    let exe_path = exe_path.join(&DB_FILE_NAME);
+    exe_path.push(&DB_FILE_NAME);
     exe_path.to_str().unwrap().to_string()
 }
 

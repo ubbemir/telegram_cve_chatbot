@@ -14,7 +14,7 @@ const CONFIG_FILE_NAME: &str = "bot_config.json";
 fn get_config_path() -> String {
     let mut exe_path = env::current_exe().unwrap();
     let _ = exe_path.pop();
-    let exe_path = exe_path.join(&CONFIG_FILE_NAME);
+    exe_path.push(&CONFIG_FILE_NAME);
     exe_path.to_str().unwrap().to_string()
 }
 

@@ -13,8 +13,8 @@ fn gen_chart_img_name(id: u64) -> String {
 fn get_chart_img_path(id: u64) -> PathBuf {
     let mut exe_path = env::current_exe().unwrap();
     let _ = exe_path.pop();
-    let exe_path = exe_path.join(CHART_DIR);
-    let exe_path = exe_path.join(&gen_chart_img_name(id));
+    exe_path.push(CHART_DIR);
+    exe_path.push(&gen_chart_img_name(id));
     exe_path
 }
 
