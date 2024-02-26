@@ -116,7 +116,7 @@ impl NISTAPIClient {
             Err(_) => return Err(Box::new(NISTApiError("API endpoint not responding".into())))
         };
         if !response.status().is_success() {
-            return Err(Box::new(NISTApiError("API endpoint refused".into())));
+            return Err(Box::new(NISTApiError(format!("API endpoint refused: Code {}", response.status()))));
         }
         
         let response: CPEResponse = match response.json::<CPEResponse>().await {

@@ -25,12 +25,13 @@ pub fn create_cvss_chart(id: u64, base_serverity_count: Vec<(&str, u64)>) -> Res
     root.fill(&WHITE).unwrap();
 
     let max_count = *base_serverity_count.iter().map(|(_, x)| {x}).max().unwrap();
+    let num_severitys = base_serverity_count.len() as u32;
     let mut chart = ChartBuilder::on(&root)
         .x_label_area_size(35)
         .y_label_area_size(40)
         .margin(5)
         .caption("CVSS score graph", ("sans-serif", 50.0))
-        .build_cartesian_2d(0u32..4u32, 0u64..max_count).unwrap();
+        .build_cartesian_2d(0u32..num_severitys, 0u64..max_count).unwrap();
 
     chart
         .configure_mesh()
