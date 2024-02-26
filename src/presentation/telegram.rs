@@ -116,8 +116,9 @@ async fn cvss_graph(args: &str, chatid: i64, api: &AsyncApi) {
 
     let cvss_chart = logic::interface::cvss_chart(args, chatid as u64).await;
 
-    if let Ok(path) = cvss_chart {
-        send_photo(&path, chatid, api).await;
+    match cvss_chart {
+        Ok(path) => send_photo(&path, chatid, api).await,
+        Err(e) => send_msg(&format!("Failed to create graph, possible that you provided an invalid CPE string. Error: {}", e), chatid, api).await
     }
 }
 
