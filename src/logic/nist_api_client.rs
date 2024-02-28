@@ -150,3 +150,53 @@ impl NISTAPIClient {
         Ok(response)
     }
 }
+
+
+#[cfg(test)]
+mod unit_tests {
+    use super::CVE;
+
+    const TEST_FILES_DIR: &str = "tests/json_input";
+
+    #[test]
+    fn cvss_v31_test() {
+        let mut d = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        d.push(TEST_FILES_DIR);
+        d.push("cvss_v31.json");
+
+        let contents = std::fs::read_to_string(&d)
+        .expect(&format!("{:?} not found!", d));
+
+        let input: CVE = serde_json::from_str(&contents).expect("Failed to parse input JSON as CVE");
+
+        assert_eq!(input.get_base_severity().unwrap(), "HIGH");
+    }
+
+    #[test]
+    fn cvss_v2_test() {
+        let mut d = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        d.push(TEST_FILES_DIR);
+        d.push("cvss_v2.json");
+
+        let contents = std::fs::read_to_string(&d)
+        .expect(&format!("{:?} not found!", d));
+
+        let input: CVE = serde_json::from_str(&contents).expect("Failed to parse input JSON as CVE");
+
+        assert_eq!(input.get_base_severity().unwrap(), "MEDIUM");
+    }
+
+    #[test]
+    fn invalid_cvss_version_test() {
+        let mut d = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        d.push(TEST_FILES_DIR);
+        d.push("invalid_cvss_version.json");
+
+        let contents = std::fs::read_to_string(&d)
+        .expect(&format!("{:?} not found!", d));
+
+        let input: CVE = serde_json::from_str(&contents).expect("Failed to parse input JSON as CVE");
+
+        assert_eq!(input.get_base_severity(), None);
+    }
+}
