@@ -1,4 +1,4 @@
-use crate::logic::{self, nist_api_client::CPEResponse};
+use crate::logic::{self, nist_api_structs::CPEResponse};
 
 pub async fn event_loop() {
     loop {
