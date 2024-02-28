@@ -36,3 +36,16 @@ pub async fn initialize_db() {
         (),
     );
 }
+
+#[cfg(test)]
+mod integration_tests {
+    #[test]
+    fn get_db_connection_test() {
+        super::get_db_connection();
+    }
+
+    #[tokio::test]
+    async fn init_db_test() {
+        super::initialize_db().await;
+    }
+}
