@@ -1,4 +1,5 @@
 use crate::logic::{self, nist_api_structs::CPEResponse};
+use crate::persistence;
 
 use std::error::Error;
 
@@ -74,6 +75,7 @@ async fn parse_user_input(line: &str, chatid: i64, api: &AsyncApi) {
     match command {
         "/list_cves" => list_cves(&args, chatid, api).await,
         "/cvss_graph" => cvss_graph(&args, chatid, api).await,
+        "/subscribe" => subscribe(&args, chatid, api).await,
         _ => {
             send_msg(&"Invalid command".to_owned(), chatid, api).await;
             was_valid = false;
@@ -119,6 +121,17 @@ async fn cvss_graph(args: &str, chatid: i64, api: &AsyncApi) {
     match cvss_chart {
         Ok(path) => send_photo(&path, chatid, api).await,
         Err(e) => send_msg(&format!("Failed to create graph, possible that you provided an invalid CPE string. Error: {}", e), chatid, api).await
+    }
+}
+
+async fn subscribe(args: &str, chatid: i64, api: &AsyncApi) {
+    send_msg(&format!("Adding your subscription of CPE={} ...", args), chatid, api).await;
+
+    let result = persistence::interface::add_subscription(args, chatid).await;
+
+    match result {
+        Ok(_) => send_msg(&format!("Subscription successfully added!"), chatid, api).await,
+        Err(e) => send_msg(&format!("Failed to insert subscription to DB. Error: {}", e), chatid, api).await
     }
 }
 

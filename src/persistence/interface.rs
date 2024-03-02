@@ -1,5 +1,8 @@
 use std::env;
 use std::sync::OnceLock;
+use std::error::Error;
+use std::io::{Error as IoError, ErrorKind};
+
 use tokio::sync::Mutex;
 use rusqlite::{Connection, OpenFlags};
 
@@ -24,17 +27,37 @@ fn get_db_connection() -> &'static Mutex<Connection> {
     )
 }
 
+async fn store_subscription(cpe: &str, chatid: i64) -> rusqlite::Result<()> {
+    let conn = get_db_connection().lock().await;
+
+    let query = "INSERT INTO subscriptions(chatid, cpe) VALUES (?1, ?2)";
+    let mut stmt = conn.prepare_cached(query)?;
+    stmt.execute((chatid, cpe))?;
+
+    Ok(())
+}
+
 pub async fn initialize_db() {
     let conn = get_db_connection().lock().await;
 
-    let _ = conn.execute(
-        "CREATE TABLE subscriptions (
-            id    INTEGER PRIMARY KEY,
-            uid  TEXT NOT NULL,
-            cpe  BLOB
+    if let Err(e) = conn.execute(
+        "CREATE TABLE IF NOT EXISTS subscriptions (
+            id      INTEGER PRIMARY KEY,
+            chatid    INTEGER NOT NULL,
+            cpe  TEXT
         )",
         (),
-    );
+    ) {
+        panic!("Failed to create subscriptions table: {:?}", e);
+    }
+}
+
+pub async fn add_subscription(cpe: &str, chatid: i64) -> Result<(), Box<dyn Error + Send>> {
+    if let Err(e) = store_subscription(cpe, chatid).await {
+        return Err(Box::new(IoError::new(ErrorKind::Other, format!("{}", e))));
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
