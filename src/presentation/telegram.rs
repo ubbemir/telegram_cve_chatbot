@@ -79,7 +79,7 @@ async fn process_message(message: Message, api: AsyncApi) {
 }
 
 async fn parse_user_input(line: &str, params: &EventParams<'_>) {
-    let (command, args) = line.split_once(" ").unwrap_or(("", ""));
+    let (command, args) = line.split_once(" ").unwrap_or((line, ""));
     let args = args.trim();
 
     let mut was_valid = true;
