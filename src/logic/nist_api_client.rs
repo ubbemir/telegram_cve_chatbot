@@ -2,6 +2,7 @@ const BASE_URL: &str = "https://services.nvd.nist.gov/rest/json/cves/2.0";
 
 use std::{error::Error, fmt, sync::Arc};
 use super::nist_api_structs::*;
+use regex::Regex;
 
 #[derive(Debug)]
 struct NISTApiError(String);
@@ -16,6 +17,11 @@ impl Error for NISTApiError {}
 #[derive(Clone)]
 pub struct NISTAPIClient {
     http_client: Arc<reqwest::Client>
+}
+
+pub fn is_valid_cpe_string(cpe: &str) -> bool {
+    let re = Regex::new(r###"cpe:2\.3:[aho\*\-](:(((\?*|\*?)([a-zA-Z0-9\-\._]|(\\[\\\*\?!"#$$%&'\(\)\+,/:;<=>@\[\]\^`\{\|}~]))+(\?*|\*?))|[\*\-])){5}(:(([a-zA-Z]{2,3}(-([a-zA-Z]{2}|[0-9]{3}))?)|[\*\-]))(:(((\?*|\*?)([a-zA-Z0-9\-\._]|(\\[\\\*\?!"#$$%&'\(\)\+,/:;<=>@\[\]\^`\{\|}~]))+(\?*|\*?))|[\*\-])){4}"###).unwrap();
+    return re.is_match(cpe);
 }
 
 impl NISTAPIClient {
@@ -67,5 +73,21 @@ impl NISTAPIClient {
         let response = self.query_nist(params).await?;
 
         Ok(response)
+    }
+}
+
+
+#[cfg(test)]
+mod unit_tests {
+    use super::is_valid_cpe_string;
+
+    #[test]
+    fn is_valid_cpe_string_test() {
+        assert_eq!(is_valid_cpe_string("test123"), false);
+        assert_eq!(is_valid_cpe_string("cpe:2.3:a:alawarmotor_town\\:_machine_soul_free:1.1:*:*:*:*:android:*:*"), false); // looks legit but misses an ':' between 'alawar' and 'motor_town'
+
+        assert_eq!(is_valid_cpe_string("cpe:2.3:a:alawar:motor_town\\:_machine_soul_free:1.1:*:*:*:*:android:*:*"), true);
+        assert_eq!(is_valid_cpe_string("cpe:2.3:o:linux:linux_kernel:5.4.21:*:*:*:*:*:*:*"), true);
+        assert_eq!(is_valid_cpe_string("cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*"), true);
     }
 }
