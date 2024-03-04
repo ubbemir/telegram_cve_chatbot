@@ -87,6 +87,7 @@ async fn parse_user_input(line: &str, params: &EventParams<'_>) {
         "/list_cves" => list_cves(&args, params).await,
         "/cvss_graph" => cvss_graph(&args, params).await,
         "/subscribe" => subscribe(&args, params).await,
+        "/subscriptions" => subscriptions(params).await,
         _ => {
             send_msg(&"Invalid command".to_owned(), params).await;
             was_valid = false;
@@ -142,6 +143,27 @@ async fn subscribe(args: &str, params: &EventParams<'_>) {
 
     match result {
         Ok(_) => send_msg(&format!("Subscription successfully added!"), params).await,
+        Err(e) => send_msg(&format!("Failed to insert subscription to DB. Error: {}", e), params).await
+    }
+}
+
+async fn subscriptions(params: &EventParams<'_>) {
+    send_msg(&format!("Retrieving your subscribed CPEs ..."), params).await;
+
+    let result = persistence::interface::retrieve_subscriptions(params.user_id).await;
+
+    match result {
+        Ok(result) => {
+            let subs: Vec<persistence::interface::Subscription> = serde_json::from_str(&result).expect("Invalid JSON recieved from persistence layer!");
+
+            let mut msg = String::new();
+            msg.push_str("Your subsrcibed CPEs:\n");
+            for sub in subs {
+                msg.push_str(&format!("{}\n", sub.cpe));
+            }
+
+            send_msg(&msg, params).await;
+        },
         Err(e) => send_msg(&format!("Failed to insert subscription to DB. Error: {}", e), params).await
     }
 }

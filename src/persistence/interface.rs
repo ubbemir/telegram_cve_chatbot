@@ -5,8 +5,16 @@ use std::io::{Error as IoError, ErrorKind};
 
 use tokio::sync::Mutex;
 use rusqlite::{Connection, OpenFlags};
+use serde::{Serialize, Deserialize};
 
 const DB_FILE_NAME: &str = "db.sqlite3";
+
+#[derive(Serialize, Deserialize)]
+#[allow(non_snake_case)]
+pub struct Subscription {
+    pub user_id: u64,
+    pub cpe: String
+}
 
 fn get_db_path() -> String {
     let mut exe_path = env::current_exe().unwrap();
@@ -37,6 +45,26 @@ async fn store_subscription(cpe: &str, user_id: u64) -> rusqlite::Result<()> {
     Ok(())
 }
 
+async fn get_subscriptions(user_id: u64) -> rusqlite::Result<Vec<Subscription>, rusqlite::Error> {
+    let conn = get_db_connection().lock().await;
+
+    let query = "SELECT * FROM subscriptions WHERE userid = ?1";
+    let mut stmt = conn.prepare_cached(query)?;
+    let result_iter = stmt.query_map((user_id,), |row| {
+        Ok(Subscription {
+            user_id: row.get(1)?,
+            cpe: row.get(2)?
+        })
+    })?;
+
+    let mut result: Vec<Subscription> = Vec::new();
+    for sub in result_iter {
+        result.push(sub?);
+    }
+
+    Ok(result)
+}
+
 pub async fn initialize_db() {
     let conn = get_db_connection().lock().await;
 
@@ -58,6 +86,15 @@ pub async fn add_subscription(cpe: &str, user_id: u64) -> Result<(), Box<dyn Err
     }
 
     Ok(())
+}
+
+pub async fn retrieve_subscriptions(user_id: u64) -> Result<String, Box<dyn Error + Send>> {
+    let result = get_subscriptions(user_id).await;
+    if let Err(e) = result {
+        return Err(Box::new(IoError::new(ErrorKind::Other, format!("{}", e))));
+    }
+
+    Ok(serde_json::to_string(&result.unwrap()).unwrap())
 }
 
 #[cfg(test)]
