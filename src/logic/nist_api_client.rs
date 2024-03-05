@@ -24,6 +24,11 @@ pub fn is_valid_cpe_string(cpe: &str) -> bool {
     return re.is_match(cpe);
 }
 
+pub fn is_valid_cve_string(cve: &str) -> bool {
+    let re = Regex::new(r#"CVE-\d{4}-\d{4,7}$"#).unwrap();
+    return re.is_match(cve);
+}
+
 impl NISTAPIClient {
     pub fn new() -> NISTAPIClient {
         NISTAPIClient {
@@ -81,6 +86,8 @@ impl NISTAPIClient {
 
 #[cfg(test)]
 mod unit_tests {
+    use crate::logic::nist_api_client::is_valid_cve_string;
+
     use super::is_valid_cpe_string;
 
     #[test]
@@ -91,5 +98,15 @@ mod unit_tests {
         assert_eq!(is_valid_cpe_string("cpe:2.3:a:alawar:motor_town\\:_machine_soul_free:1.1:*:*:*:*:android:*:*"), true);
         assert_eq!(is_valid_cpe_string("cpe:2.3:o:linux:linux_kernel:5.4.21:*:*:*:*:*:*:*"), true);
         assert_eq!(is_valid_cpe_string("cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*"), true);
+    }
+
+    #[test]
+    fn is_valid_cve_string_test() {
+        assert_eq!(is_valid_cve_string("jddjkhYDDKDK"), false);
+        assert_eq!(is_valid_cve_string("CVE-2015-4000-"), false);
+
+        assert_eq!(is_valid_cve_string("CVE-2015-4000"), true);
+        assert_eq!(is_valid_cve_string("CVE-2009-1394"), true);
+        assert_eq!(is_valid_cve_string("CVE-1999-0524"), true);
     }
 }
