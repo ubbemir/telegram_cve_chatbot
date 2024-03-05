@@ -82,12 +82,12 @@ async fn parse_user_input(line: &str, params: &EventParams<'_>) {
     let args: Vec<&str> = line.split(" ").collect();
     let command = args[0];
 
-    let mut was_valid = true;
+    let was_valid;
     match command {
-        "/list_cves" => list_cves(&args, params).await,
-        "/cvss_graph" => cvss_graph(&args, params).await,
-        "/subscribe" => subscribe(&args, params).await,
-        "/subscriptions" => subscriptions(params).await,
+        "/list_cves" => was_valid = list_cves(&args, params).await,
+        "/cvss_graph" => was_valid = cvss_graph(&args, params).await,
+        "/subscribe" => was_valid = subscribe(&args, params).await,
+        "/subscriptions" => was_valid = subscriptions(params).await,
         _ => {
             send_msg(&"Invalid command".to_owned(), params).await;
             was_valid = false;
@@ -99,16 +99,16 @@ async fn parse_user_input(line: &str, params: &EventParams<'_>) {
     }
 }
 
-async fn list_cves(args: &Vec<&str>, params: &EventParams<'_>) {
+async fn list_cves(args: &Vec<&str>, params: &EventParams<'_>) -> bool {
     if args.len() < 2 {
         send_msg(&format!("Too few arguments. Usage: /list_cves <cpe2.3_string>"), params).await;
-        return;
+        return false;
     }
     let cpe = args[1];
 
     if !is_valid_cpe_string(cpe) {
         send_msg(&format!("Invalid CPE string. CPE has to follow CPE2.3 standard"), params).await;
-        return;
+        return false;
     }
 
     send_msg(&format!("Fetching CVEs for CPE:\n{} ...", cpe), params).await;
@@ -116,7 +116,7 @@ async fn list_cves(args: &Vec<&str>, params: &EventParams<'_>) {
     let result = logic::interface::list_cves(cpe).await;
     if let Err(e) = result {
         send_msg(&format!("Failed to retrieve information from NIST. Error: {}", e), params).await;
-        return;
+        return true;
     }
     let result = result.unwrap();
 
@@ -134,18 +134,20 @@ async fn list_cves(args: &Vec<&str>, params: &EventParams<'_>) {
     }
   
     send_msg(&msg, params).await;
+
+    true
 }
 
-async fn cvss_graph(args: &Vec<&str>, params: &EventParams<'_>) {
+async fn cvss_graph(args: &Vec<&str>, params: &EventParams<'_>) -> bool {
     if args.len() < 2 {
         send_msg(&format!("Too few arguments. Usage: /cvss_graph <cpe2.3_string>"), params).await;
-        return;
+        return false;
     }
     let cpe = args[1];
 
     if !is_valid_cpe_string(cpe) {
         send_msg(&format!("Invalid CPE string. CPE has to follow CPE2.3 standard"), params).await;
-        return;
+        return false;
     }
 
     send_msg(&format!("Creating CVSS score graph for CPE:\n{} ...", cpe), params).await;
@@ -156,18 +158,20 @@ async fn cvss_graph(args: &Vec<&str>, params: &EventParams<'_>) {
         Ok(path) => send_photo(&path, params).await,
         Err(e) => send_msg(&format!("Failed to create graph. Error: {}", e), params).await
     }
+
+    true
 }
 
-async fn subscribe(args: &Vec<&str>, params: &EventParams<'_>) {
+async fn subscribe(args: &Vec<&str>, params: &EventParams<'_>) -> bool {
     if args.len() < 2 {
         send_msg(&format!("Too few arguments. Usage: /subscribe <cpe2.3_string>"), params).await;
-        return;
+        return false;
     }
     let cpe = args[1];
 
     if !is_valid_cpe_string(cpe) {
         send_msg(&format!("Invalid CPE string. CPE has to follow CPE2.3 standard"), params).await;
-        return;
+        return false;
     }
 
     send_msg(&format!("Adding your subscription of CPE={} ...", cpe), params).await;
@@ -178,9 +182,11 @@ async fn subscribe(args: &Vec<&str>, params: &EventParams<'_>) {
         Ok(_) => send_msg(&format!("Subscription successfully added!"), params).await,
         Err(e) => send_msg(&format!("Failed to insert subscription to DB. Error: {}", e), params).await
     }
+
+    true
 }
 
-async fn subscriptions(params: &EventParams<'_>) {
+async fn subscriptions(params: &EventParams<'_>) -> bool {
     send_msg(&format!("Retrieving your subscribed CPEs ..."), params).await;
 
     let result = persistence::interface::retrieve_subscriptions(params.user_id).await;
@@ -199,6 +205,8 @@ async fn subscriptions(params: &EventParams<'_>) {
         },
         Err(e) => send_msg(&format!("Failed to insert subscription to DB. Error: {}", e), params).await
     }
+
+    true
 }
 
 async fn send_msg(msg: &str, params: &EventParams<'_>) {
