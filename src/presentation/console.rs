@@ -22,7 +22,7 @@ async fn parse_user_input(line: &String) {
 async fn list_cves(args: &str) {
     println!("Fetching CVEs for cpe={} ...", args);
 
-    let result = logic::interface::list_cves(&args).await.unwrap();
+    let result = logic::interface::list_cves(&args, 1).await.unwrap();
     let result: CPEResponse = serde_json::from_str(&result).unwrap();
 
     for item in result.vulnerabilities {

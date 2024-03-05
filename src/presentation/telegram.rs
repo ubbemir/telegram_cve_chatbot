@@ -101,7 +101,7 @@ async fn parse_user_input(line: &str, params: &EventParams<'_>) {
 
 async fn list_cves(args: &Vec<&str>, params: &EventParams<'_>) -> bool {
     if args.len() < 2 {
-        send_msg(&format!("Too few arguments. Usage: /list_cves <cpe2.3_string>"), params).await;
+        send_msg(&format!("Too few arguments. Usage: /list_cves <cpe2.3_string> <OPTIONAL:page_number>"), params).await;
         return false;
     }
     let cpe = args[1];
@@ -111,9 +111,15 @@ async fn list_cves(args: &Vec<&str>, params: &EventParams<'_>) -> bool {
         return false;
     }
 
-    send_msg(&format!("Fetching CVEs for CPE:\n{} ...", cpe), params).await;
+    let page = if args.len() >= 3 { args[2].parse::<u64>().unwrap_or(1u64) } else { 1u64 };
+    if page < 1 {
+        send_msg(&format!("Invalid page number. Page number has to be 1 or greater."), params).await;
+        return false;
+    }
 
-    let result = logic::interface::list_cves(cpe).await;
+    send_msg(&format!("Fetching CVEs for CPE (page {}):\n{} ...", page, cpe), params).await;
+
+    let result = logic::interface::list_cves(cpe, page).await;
     if let Err(e) = result {
         send_msg(&format!("Failed to retrieve information from NIST. Error: {}", e), params).await;
         return true;

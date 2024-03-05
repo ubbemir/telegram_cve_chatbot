@@ -52,21 +52,23 @@ impl NISTAPIClient {
         Ok(response)
     }
 
-    pub async fn get_cves_from_cpe(&self, cpe: String, limited_results: bool, amount: u64) -> Result<CPEResponse, Box<dyn Error + Send>> {
-        if !limited_results {
+    pub async fn get_cves_from_cpe(&self, cpe: String, amount: Option<u64>, page: Option<u64>) -> Result<CPEResponse, Box<dyn Error + Send>> {
+        if let None = amount {
             let params = format!("cpeName={}", urlencoding::encode(&cpe));
             let response = self.query_nist(params).await?;
 
             return Ok(response);
         }
+        let amount = amount.unwrap();
+        let page = page.unwrap_or(1);
         
         // this first request is used to get the total amount of CVEs
         let params = format!("cpeName={}&resultsPerPage=1", urlencoding::encode(&cpe));
         let response = self.query_nist(params).await?;
 
         let mut start_index = 0;
-        if amount < response.totalResults {
-            start_index = response.totalResults - amount;    
+        if (amount * page) < response.totalResults {
+            start_index = response.totalResults - amount * page; 
         }
         
         let params = format!("cpeName={}&resultsPerPage={}&startIndex={}", urlencoding::encode(&cpe), amount, start_index);
