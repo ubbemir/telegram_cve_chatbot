@@ -84,6 +84,7 @@ async fn parse_user_input(line: &str, params: &EventParams<'_>) {
 
     let was_valid;
     match command {
+        "/start" => was_valid = start_command(params).await,
         "/list_cves" => was_valid = list_cves(&args, params).await,
         "/cvss_graph" => was_valid = cvss_graph(&args, params).await,
         "/subscribe" => was_valid = subscribe(&args, params).await,
@@ -97,6 +98,11 @@ async fn parse_user_input(line: &str, params: &EventParams<'_>) {
     if was_valid {
         println!("Valid command: {}", command);
     }
+}
+
+async fn start_command(params: &EventParams<'_>) -> bool {
+    send_msg(&format!("Welcome! Begin typing '/' to see available commands.\nTo see their usage just enter the command without any parameters."), params).await;
+    true
 }
 
 async fn list_cves(args: &Vec<&str>, params: &EventParams<'_>) -> bool {
