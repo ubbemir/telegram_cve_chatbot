@@ -1,4 +1,4 @@
-use crate::logic::{self, nist_api_structs::CPEResponse};
+use crate::logic::{self, nist_api_structs::CPEResponse, nist_api_client::is_valid_cpe_string};
 use crate::persistence;
 
 use std::error::Error;
@@ -100,11 +100,16 @@ async fn parse_user_input(line: &str, params: &EventParams<'_>) {
 }
 
 async fn list_cves(args: &str, params: &EventParams<'_>) {
+    if !is_valid_cpe_string(args) {
+        send_msg(&format!("Invalid CPE string. CPE has to follow CPE2.3 standard"), params).await;
+        return;
+    }
+
     send_msg(&format!("Fetching CVEs for CPE:\n{} ...", args), params).await;
 
     let result = logic::interface::list_cves(&args).await;
     if let Err(e) = result {
-        send_msg(&format!("Failed to retrieve information from NIST, possible that you provided an invalid CPE string. Error: {}", e), params).await;
+        send_msg(&format!("Failed to retrieve information from NIST. Error: {}", e), params).await;
         return;
     }
     let result = result.unwrap();
@@ -126,17 +131,27 @@ async fn list_cves(args: &str, params: &EventParams<'_>) {
 }
 
 async fn cvss_graph(args: &str, params: &EventParams<'_>) {
+    if !is_valid_cpe_string(args) {
+        send_msg(&format!("Invalid CPE string. CPE has to follow CPE2.3 standard"), params).await;
+        return;
+    }
+
     send_msg(&format!("Creating CVSS score graph for CPE:\n{} ...", args), params).await;
 
     let cvss_chart = logic::interface::cvss_chart(args, params.chat_id as u64).await;
 
     match cvss_chart {
         Ok(path) => send_photo(&path, params).await,
-        Err(e) => send_msg(&format!("Failed to create graph, possible that you provided an invalid CPE string. Error: {}", e), params).await
+        Err(e) => send_msg(&format!("Failed to create graph. Error: {}", e), params).await
     }
 }
 
 async fn subscribe(args: &str, params: &EventParams<'_>) {
+    if !is_valid_cpe_string(args) {
+        send_msg(&format!("Invalid CPE string. CPE has to follow CPE2.3 standard"), params).await;
+        return;
+    }
+
     send_msg(&format!("Adding your subscription of CPE={} ...", args), params).await;
 
     let result = persistence::interface::add_subscription(args, params.user_id).await;
