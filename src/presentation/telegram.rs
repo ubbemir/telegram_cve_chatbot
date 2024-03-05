@@ -79,8 +79,8 @@ async fn process_message(message: Message, api: AsyncApi) {
 }
 
 async fn parse_user_input(line: &str, params: &EventParams<'_>) {
-    let (command, args) = line.split_once(" ").unwrap_or((line, ""));
-    let args = args.trim();
+    let args: Vec<&str> = line.split(" ").collect();
+    let command = args[0];
 
     let mut was_valid = true;
     match command {
@@ -99,15 +99,21 @@ async fn parse_user_input(line: &str, params: &EventParams<'_>) {
     }
 }
 
-async fn list_cves(args: &str, params: &EventParams<'_>) {
-    if !is_valid_cpe_string(args) {
+async fn list_cves(args: &Vec<&str>, params: &EventParams<'_>) {
+    if args.len() < 2 {
+        send_msg(&format!("Too few arguments. Usage: /list_cves <cpe2.3_string>"), params).await;
+        return;
+    }
+    let cpe = args[1];
+
+    if !is_valid_cpe_string(cpe) {
         send_msg(&format!("Invalid CPE string. CPE has to follow CPE2.3 standard"), params).await;
         return;
     }
 
-    send_msg(&format!("Fetching CVEs for CPE:\n{} ...", args), params).await;
+    send_msg(&format!("Fetching CVEs for CPE:\n{} ...", cpe), params).await;
 
-    let result = logic::interface::list_cves(&args).await;
+    let result = logic::interface::list_cves(cpe).await;
     if let Err(e) = result {
         send_msg(&format!("Failed to retrieve information from NIST. Error: {}", e), params).await;
         return;
@@ -130,15 +136,21 @@ async fn list_cves(args: &str, params: &EventParams<'_>) {
     send_msg(&msg, params).await;
 }
 
-async fn cvss_graph(args: &str, params: &EventParams<'_>) {
-    if !is_valid_cpe_string(args) {
+async fn cvss_graph(args: &Vec<&str>, params: &EventParams<'_>) {
+    if args.len() < 2 {
+        send_msg(&format!("Too few arguments. Usage: /cvss_graph <cpe2.3_string>"), params).await;
+        return;
+    }
+    let cpe = args[1];
+
+    if !is_valid_cpe_string(cpe) {
         send_msg(&format!("Invalid CPE string. CPE has to follow CPE2.3 standard"), params).await;
         return;
     }
 
-    send_msg(&format!("Creating CVSS score graph for CPE:\n{} ...", args), params).await;
+    send_msg(&format!("Creating CVSS score graph for CPE:\n{} ...", cpe), params).await;
 
-    let cvss_chart = logic::interface::cvss_chart(args, params.chat_id as u64).await;
+    let cvss_chart = logic::interface::cvss_chart(cpe, params.chat_id as u64).await;
 
     match cvss_chart {
         Ok(path) => send_photo(&path, params).await,
@@ -146,15 +158,21 @@ async fn cvss_graph(args: &str, params: &EventParams<'_>) {
     }
 }
 
-async fn subscribe(args: &str, params: &EventParams<'_>) {
-    if !is_valid_cpe_string(args) {
+async fn subscribe(args: &Vec<&str>, params: &EventParams<'_>) {
+    if args.len() < 2 {
+        send_msg(&format!("Too few arguments. Usage: /subscribe <cpe2.3_string>"), params).await;
+        return;
+    }
+    let cpe = args[1];
+
+    if !is_valid_cpe_string(cpe) {
         send_msg(&format!("Invalid CPE string. CPE has to follow CPE2.3 standard"), params).await;
         return;
     }
 
-    send_msg(&format!("Adding your subscription of CPE={} ...", args), params).await;
+    send_msg(&format!("Adding your subscription of CPE={} ...", cpe), params).await;
 
-    let result = persistence::interface::add_subscription(args, params.user_id).await;
+    let result = persistence::interface::add_subscription(cpe, params.user_id).await;
 
     match result {
         Ok(_) => send_msg(&format!("Subscription successfully added!"), params).await,
