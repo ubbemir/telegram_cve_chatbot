@@ -1,7 +1,22 @@
+use crate::persistence;
+use crate::persistence::interface::Subscription;
+
 use super::chart_creator;
-use super::nist_api_client::NISTAPIClient;
+use super::nist_api_client::{is_valid_cpe_string, NISTAPIClient};
+use super::nist_api_structs::CPEResponse;
 
 use std::error::Error;
+use std::fmt;
+
+#[derive(Debug)]
+struct LogicError(String);
+unsafe impl Send for LogicError {}
+impl fmt::Display for LogicError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "LOGIC_ERROR: {}", self.0)
+    }
+}
+impl Error for LogicError {}
 
 pub async fn list_cves(cpe: &str, page: u64) -> Result<String, Box<dyn Error + Send>> {
     let client = NISTAPIClient::new();
@@ -31,4 +46,26 @@ pub async fn cvss_chart(arg: &str, id: u64) -> Result<String, Box<dyn Error + Se
 
     let chart_file = chart_creator::create_cvss_chart(id, cvss_count)?;
     Ok(chart_file)
+}
+
+pub async fn new_cves(user_id: u64, days: u64) -> Result<Vec<(String, CPEResponse)>, Box<dyn Error + Send>> {
+    let client = NISTAPIClient::new();
+    let subs: Vec<Subscription> = serde_json::from_str(&persistence::interface::retrieve_subscriptions(user_id).await?).unwrap_or(Vec::new());
+
+    let now = chrono::Utc::now();
+    let present = match now.checked_sub_days(chrono::Days::new(days)) {
+        Some(val) => val,
+        None => return Err(Box::new(LogicError(format!("Failed to get date {} days ago.", days))))
+    };
+
+    let mut result: Vec<(String, CPEResponse)> = Vec::with_capacity(subs.len()); 
+    for sub in subs {
+        if !is_valid_cpe_string(&sub.cpe) { continue; }
+
+        let response = client.get_latest_updated_cves_from_cpe(&sub.cpe, present.timestamp(), now.timestamp()).await?;
+
+        result.push((sub.cpe, response));
+    }
+
+    Ok(result)
 }

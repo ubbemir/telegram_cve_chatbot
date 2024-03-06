@@ -89,6 +89,7 @@ async fn parse_user_input(line: &str, params: &EventParams<'_>) {
         "/cvss_graph" => was_valid = cvss_graph(&args, params).await,
         "/subscribe" => was_valid = subscribe(&args, params).await,
         "/subscriptions" => was_valid = subscriptions(params).await,
+        "/new_cves" => was_valid = new_cves(&args, params).await,
         _ => {
             send_msg(&"Invalid command".to_owned(), params).await;
             was_valid = false;
@@ -215,7 +216,45 @@ async fn subscriptions(params: &EventParams<'_>) -> bool {
 
             send_msg(&msg, params).await;
         },
-        Err(e) => send_msg(&format!("Failed to insert subscription to DB. Error: {}", e), params).await
+        Err(e) => send_msg(&format!("Failed to retrieve subscriptions from DB. Error: {}", e), params).await
+    }
+
+    true
+}
+
+async fn new_cves(args: &Vec<&str>, params: &EventParams<'_>) -> bool {
+    if args.len() < 2 {
+        send_msg(&format!("Too few arguments. Usage: /new_cves <days_ago>"), params).await;
+        return false;
+    }
+    
+    let days = args[1].parse::<u64>().unwrap_or(7u64);
+
+    send_msg(&format!("Retrieving new CVEs for your subscribed CPEs ..."), params).await;
+
+    let result = logic::interface::new_cves(params.user_id, days).await;
+
+    match result {
+        Ok(cpe_responses) => {
+
+            let mut msg = String::new();
+            msg.push_str(&format!("Updated CVEs for the latest {} days:\n", days));
+            for response in cpe_responses {
+                msg.push_str(&format!("{} :\n", response.0));
+                for item in response.1.vulnerabilities {
+                    if let Some(severity) = item.cve.get_base_severity() {
+                        msg.push_str(&format!("{} - {}\n", item.cve.id, severity));
+                        continue;
+                    }
+                    
+                    msg.push_str(&format!("{} - NO METRIC AVAILABLE\n", item.cve.id));
+                }
+                msg.push_str("\n");
+            }
+
+            send_msg(&msg, params).await;
+        },
+        Err(e) => send_msg(&format!("Failed to retrieve new CVEs. Error: {}", e), params).await
     }
 
     true

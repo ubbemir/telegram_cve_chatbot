@@ -3,6 +3,7 @@ const BASE_URL: &str = "https://services.nvd.nist.gov/rest/json/cves/2.0";
 use std::{error::Error, fmt, sync::Arc};
 use super::nist_api_structs::*;
 use regex::Regex;
+use chrono::prelude::*;
 
 #[derive(Debug)]
 struct NISTApiError(String);
@@ -14,10 +15,6 @@ impl fmt::Display for NISTApiError {
 }
 impl Error for NISTApiError {}
 
-#[derive(Clone)]
-pub struct NISTAPIClient {
-    http_client: Arc<reqwest::Client>
-}
 
 pub fn is_valid_cpe_string(cpe: &str) -> bool {
     let re = Regex::new(r###"cpe:2\.3:[aho\*\-](:(((\?*|\*?)([a-zA-Z0-9\-\._]|(\\[\\\*\?!"#$$%&'\(\)\+,/:;<=>@\[\]\^`\{\|}~]))+(\?*|\*?))|[\*\-])){5}(:(([a-zA-Z]{2,3}(-([a-zA-Z]{2}|[0-9]{3}))?)|[\*\-]))(:(((\?*|\*?)([a-zA-Z0-9\-\._]|(\\[\\\*\?!"#$$%&'\(\)\+,/:;<=>@\[\]\^`\{\|}~]))+(\?*|\*?))|[\*\-])){4}"###).unwrap();
@@ -27,6 +24,19 @@ pub fn is_valid_cpe_string(cpe: &str) -> bool {
 pub fn is_valid_cve_string(cve: &str) -> bool {
     let re = Regex::new(r#"CVE-\d{4}-\d{4,7}$"#).unwrap();
     return re.is_match(cve);
+}
+
+fn format_timestamp(timestamp_seconds: i64) -> String {
+    let datetime: DateTime<Utc> = DateTime::from_timestamp(timestamp_seconds, 0).unwrap();
+
+    let mut newdate = datetime.format("%Y-%m-%dT%H:%M:%S.000").to_string();
+    newdate.push_str("%2B01:00");
+    newdate
+}
+
+#[derive(Clone)]
+pub struct NISTAPIClient {
+    http_client: Arc<reqwest::Client>
 }
 
 impl NISTAPIClient {
@@ -46,6 +56,7 @@ impl NISTAPIClient {
             Err(_) => return Err(Box::new(NISTApiError("API endpoint not responding".into())))
         };
         if !response.status().is_success() {
+            eprintln!("Failed to fetch {} - Status code: {}", url, response.status());
             return Err(Box::new(NISTApiError(format!("API endpoint refused: Code {}", response.status()))));
         }
         
@@ -81,6 +92,16 @@ impl NISTAPIClient {
 
         Ok(response)
     }
+
+    pub async fn get_latest_updated_cves_from_cpe(&self, cpe: &str, start_date: i64, end_date: i64) -> Result<CPEResponse, Box<dyn Error + Send>> {
+        let start_date = format_timestamp(start_date);
+        let end_date = format_timestamp(end_date);
+        
+        let params = format!("cpeName={}&lastModStartDate={}&lastModEndDate={}", urlencoding::encode(cpe), start_date, end_date);
+        let response = self.query_nist(params).await?;
+
+        Ok(response)
+    }
 }
 
 
@@ -89,6 +110,7 @@ mod unit_tests {
     use crate::logic::nist_api_client::is_valid_cve_string;
 
     use super::is_valid_cpe_string;
+    use super::format_timestamp;
 
     #[test]
     fn is_valid_cpe_string_test() {
@@ -108,5 +130,11 @@ mod unit_tests {
         assert_eq!(is_valid_cve_string("CVE-2015-4000"), true);
         assert_eq!(is_valid_cve_string("CVE-2009-1394"), true);
         assert_eq!(is_valid_cve_string("CVE-1999-0524"), true);
+    }
+
+    #[test]
+    fn format_timestamp_test() {
+        assert_eq!(format_timestamp(1628082000), "2021-08-04T13:00:00.000%2B01:00");
+        assert_eq!(format_timestamp(1634909760), "2021-10-22T13:36:00.000%2B01:00");
     }
 }
