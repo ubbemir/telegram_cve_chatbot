@@ -16,3 +16,4 @@ plotters = "0.3.3"
 rusqlite = { version = "0.31.0", features = ["bundled"] }
 regex = "1.10.3"
 chrono = "0.4.35"
+genpdf = "0.2.0"
