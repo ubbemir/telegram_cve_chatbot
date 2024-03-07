@@ -20,7 +20,7 @@ impl Error for LogicError {}
 
 pub async fn list_cves(cpe: &str, page: u64) -> Result<String, Box<dyn Error + Send>> {
     let client = NISTAPIClient::new();
-    let response = client.get_cves_from_cpe(cpe.to_owned(), Some(10), Some(page)).await?;
+    let response = client.get_cves_from_cpe(cpe, Some(10), Some(page)).await?;
 
     let result = serde_json::to_string(&response).unwrap();
 
@@ -29,7 +29,7 @@ pub async fn list_cves(cpe: &str, page: u64) -> Result<String, Box<dyn Error + S
 
 pub async fn cvss_chart(arg: &str, id: u64) -> Result<String, Box<dyn Error + Send>> {
     let client = NISTAPIClient::new();
-    let response = client.get_cves_from_cpe(arg.to_owned(), None, None).await?;
+    let response = client.get_cves_from_cpe(arg, None, None).await?;
 
     let mut cvss_count = vec![("Low", 0u64), ("Medium", 0u64), ("High", 0u64), ("Critical", 0u64)];
     for item in response.vulnerabilities {

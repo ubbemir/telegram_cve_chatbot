@@ -68,7 +68,7 @@ impl NISTAPIClient {
         Ok(response)
     }
 
-    pub async fn get_cves_from_cpe(&self, cpe: String, amount: Option<u64>, page: Option<u64>) -> Result<CPEResponse, Box<dyn Error + Send>> {
+    pub async fn get_cves_from_cpe(&self, cpe: &str, amount: Option<u64>, page: Option<u64>) -> Result<CPEResponse, Box<dyn Error + Send>> {
         if let None = amount {
             let params = format!("cpeName={}", urlencoding::encode(&cpe));
             let response = self.query_nist(params).await?;
@@ -98,6 +98,13 @@ impl NISTAPIClient {
         let end_date = format_timestamp(end_date);
         
         let params = format!("cpeName={}&lastModStartDate={}&lastModEndDate={}", urlencoding::encode(cpe), start_date, end_date);
+        let response = self.query_nist(params).await?;
+
+        Ok(response)
+    }
+
+    pub async fn get_cve_info(&self, cve: &str) -> Result<CPEResponse, Box<dyn Error + Send>> {
+        let params = format!("cveId={}", urlencoding::encode(cve));
         let response = self.query_nist(params).await?;
 
         Ok(response)
