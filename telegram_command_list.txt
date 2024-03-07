@@ -1,4 +1,5 @@
 list_cves - List latest CVEs given a CPE string
+cve_detail - Get more information about a specific CVE
 cvss_graph - Generate a CVSS score graph given a CPE string
 subscribe - Subscribe to a CPE to get updates on the newest CVE updates
 subscriptions - View your active CPE subcriptions

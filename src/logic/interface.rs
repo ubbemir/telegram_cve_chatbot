@@ -69,3 +69,12 @@ pub async fn new_cves(user_id: u64, days: u64) -> Result<Vec<(String, CPERespons
 
     Ok(result)
 }
+
+pub async fn cve_detail(cve: &str) -> Result<String, Box<dyn Error + Send>> {
+    let client = NISTAPIClient::new();
+    let response = client.get_cve_info(cve).await?;
+
+    let result = serde_json::to_string(&response).unwrap();
+
+    Ok(result)
+}

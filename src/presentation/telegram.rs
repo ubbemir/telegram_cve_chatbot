@@ -1,3 +1,4 @@
+use crate::logic::nist_api_client::is_valid_cve_string;
 use crate::logic::{self, nist_api_structs::CPEResponse, nist_api_client::is_valid_cpe_string};
 use crate::persistence;
 
@@ -86,6 +87,7 @@ async fn parse_user_input(line: &str, params: &EventParams<'_>) {
     match command {
         "/start" => was_valid = start_command(params).await,
         "/list_cves" => was_valid = list_cves(&args, params).await,
+        "/cve_detail" => was_valid = cve_detail(&args, params).await,
         "/cvss_graph" => was_valid = cvss_graph(&args, params).await,
         "/subscribe" => was_valid = subscribe(&args, params).await,
         "/subscriptions" => was_valid = subscriptions(params).await,
@@ -256,6 +258,61 @@ async fn new_cves(args: &Vec<&str>, params: &EventParams<'_>) -> bool {
         },
         Err(e) => send_msg(&format!("Failed to retrieve new CVEs. Error: {}", e), params).await
     }
+
+    true
+}
+
+async fn cve_detail(args: &Vec<&str>, params: &EventParams<'_>) -> bool {
+    if args.len() < 2 {
+        send_msg(&format!("Too few arguments. Usage: /cve_detail <cve_id>"), params).await;
+        return false;
+    }
+    let cve = args[1];
+
+    if !is_valid_cve_string(cve) {
+        send_msg(&format!("Invalid CVE string."), params).await;
+        return false;
+    }
+
+    send_msg(&format!("Fetching CVE details for {} ...", cve), params).await;
+
+    let result = logic::interface::cve_detail(cve).await;
+    if let Err(e) = result {
+        send_msg(&format!("Failed to retrieve information from NIST. Error: {}", e), params).await;
+        return true;
+    }
+    let result = result.unwrap();
+
+
+    let result: CPEResponse = serde_json::from_str(&result).unwrap();
+
+    let mut msg = String::new();
+    for item in result.vulnerabilities {
+        msg.push_str(&format!("{} :\n\n", item.cve.id));
+
+        // Description
+        for desc in &item.cve.descriptions {
+            if desc.lang == "en" {
+                msg.push_str(&format!("Description: {}\n\n", desc.value));
+                break;
+            }
+        }
+
+        // CVSS
+        msg.push_str(&format!("Severity: {}\n", item.cve.get_base_severity().unwrap_or(&"None".to_owned())));
+
+        match item.cve.get_cvss_base_score() {
+            Some(score) => msg.push_str(&format!("Base score: {}\n", score.to_string())),
+            None => msg.push_str(&format!("Base score unavailable\n"))
+        };
+        
+
+
+        // Link
+        msg.push_str(&format!("NVD Link: https://nvd.nist.gov/vuln/detail/{}", item.cve.id));
+    }
+  
+    send_msg(&msg, params).await;
 
     true
 }

@@ -45,6 +45,7 @@ pub struct CVSSMetricContainer {
 pub struct CVSSMetricV2 {
     pub source: String,
     pub baseSeverity: String,
+    pub cvssData: CVSSV2Data,
 
     #[serde(rename = "type")] 
     pub t: String
@@ -64,7 +65,15 @@ pub struct CVSSMetricV31 {
 #[allow(non_snake_case)]
 pub struct CVSSV31Data {
     version: String,
-    baseSeverity: String
+    baseSeverity: String,
+    baseScore: f64
+}
+
+#[derive(Serialize, Deserialize)]
+#[allow(non_snake_case)]
+pub struct CVSSV2Data {
+    version: String,
+    baseScore: f64
 }
 
 impl CVE {
@@ -75,6 +84,18 @@ impl CVE {
         
         if let Some(metrics) = &self.metrics.cvssMetricV2 {
             return Some(&metrics[0].baseSeverity);
+        }
+
+        None
+    }
+
+    pub fn get_cvss_base_score(&self) -> Option<f64> {
+        if let Some(metrics) = &self.metrics.cvssMetricV31 {
+            return Some(metrics[0].cvssData.baseScore);
+        }
+        
+        if let Some(metrics) = &self.metrics.cvssMetricV2 {
+            return Some(metrics[0].cvssData.baseScore);
         }
 
         None
