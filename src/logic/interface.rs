@@ -1,7 +1,7 @@
 use crate::persistence;
 use crate::persistence::interface::Subscription;
 
-use super::chart_creator;
+use super::{chart_creator, pdf_creator};
 use super::nist_api_client::{is_valid_cpe_string, NISTAPIClient};
 use super::nist_api_structs::CPEResponse;
 
@@ -77,4 +77,12 @@ pub async fn cve_detail(cve: &str) -> Result<String, Box<dyn Error + Send>> {
     let result = serde_json::to_string(&response).unwrap();
 
     Ok(result)
+}
+
+pub async fn get_pdf(cpe: &str, id: u64) -> Result<String, Box<dyn Error + Send>> {
+    let client = NISTAPIClient::new();
+    let response = client.get_cves_from_cpe(cpe, Some(20), Some(1)).await?;
+
+    let pdf_file = pdf_creator::generate_pdf(id, cpe, response)?;
+    Ok(pdf_file)
 }

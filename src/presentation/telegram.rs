@@ -9,6 +9,7 @@ use frankenstein::GetUpdatesParams;
 use frankenstein::Message;
 use frankenstein::SendMessageParams;
 use frankenstein::SendPhotoParams;
+use frankenstein::SendDocumentParams;
 use frankenstein::{AsyncApi, UpdateContent};
 
 struct EventParams <'a> {
@@ -92,6 +93,7 @@ async fn parse_user_input(line: &str, params: &EventParams<'_>) {
         "/subscribe" => was_valid = subscribe(&args, params).await,
         "/subscriptions" => was_valid = subscriptions(params).await,
         "/new_cves" => was_valid = new_cves(&args, params).await,
+        "/get_pdf" => was_valid = get_pdf(&args, params).await,
         _ => {
             send_msg(&"Invalid command".to_owned(), params).await;
             was_valid = false;
@@ -319,6 +321,30 @@ async fn cve_detail(args: &Vec<&str>, params: &EventParams<'_>) -> bool {
     true
 }
 
+async fn get_pdf(args: &Vec<&str>, params: &EventParams<'_>) -> bool {
+    if args.len() < 2 {
+        send_msg(&format!("Too few arguments. Usage: /get_pdf <cpe2.3_string>"), params).await;
+        return false;
+    }
+    let cpe = args[1];
+
+    if !is_valid_cpe_string(cpe) {
+        send_msg(&format!("Invalid CPE string. CPE has to follow CPE2.3 standard"), params).await;
+        return false;
+    }
+
+    send_msg(&format!("Creating PDF report for CPE:\n{} ...", cpe), params).await;
+
+    let pdf_file = logic::interface::get_pdf(cpe, params.chat_id as u64).await;
+
+    match pdf_file {
+        Ok(path) => send_file(&path, params).await,
+        Err(e) => send_msg(&format!("Failed to create PDF. Error: {}", e), params).await
+    }
+
+    true
+}
+
 async fn send_msg(msg: &str, params: &EventParams<'_>) {
     let send_message_params = SendMessageParams::builder()
         .chat_id(params.chat_id)
@@ -340,5 +366,18 @@ async fn send_photo(photo_path: &str, params: &EventParams<'_>) {
 
     if let Err(error) = params.api.send_photo(&photo_params).await {
         eprintln!("Failed to upload photo: {error:?}");
+    }
+}
+
+async fn send_file(file_path: &str, params: &EventParams<'_>) {
+    let file = std::path::PathBuf::from(file_path);
+
+    let document_params = SendDocumentParams::builder()
+        .chat_id(params.chat_id)
+        .document(file)
+        .build();
+
+    if let Err(error) = params.api.send_document(&document_params).await {
+        eprintln!("Failed to upload file: {error:?}");
     }
 }

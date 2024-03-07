@@ -4,3 +4,4 @@ cvss_graph - Generate a CVSS score graph given a CPE string
 subscribe - Subscribe to a CPE to get updates on the newest CVE updates
 subscriptions - View your active CPE subcriptions
 new_cves - Get a list of all newly updated CVEs for your subscriptions
+get_pdf - Get a summary PDF for a specific CPE string
