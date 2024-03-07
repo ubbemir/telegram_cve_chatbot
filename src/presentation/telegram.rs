@@ -103,6 +103,25 @@ async fn parse_user_input(line: &str, params: &EventParams<'_>) {
     }
 }
 
+fn summarize_cpe_response(response: &CPEResponse) -> String {
+    let mut msg = String::new();
+    for item in &response.vulnerabilities {
+        if let Some(severity) = item.cve.get_base_severity() {
+            let score: String = match item.cve.get_cvss_base_score() {
+                Some(val) => val.to_string(),
+                None => "_".to_owned()
+            };
+
+            msg.push_str(&format!("{} - {} - {}\n", item.cve.id, severity, score));
+            continue;
+        }
+        
+        msg.push_str(&format!("{} - NO METRIC AVAILABLE\n", item.cve.id));
+    }
+
+    msg
+}
+
 async fn start_command(params: &EventParams<'_>) -> bool {
     send_msg(&format!("Welcome! Begin typing '/' to see available commands.\nTo see their usage just enter the command without any parameters."), params).await;
     true
@@ -137,18 +156,8 @@ async fn list_cves(args: &Vec<&str>, params: &EventParams<'_>) -> bool {
 
 
     let result: CPEResponse = serde_json::from_str(&result).unwrap();
-
-    let mut msg = String::new();
-    for item in result.vulnerabilities {
-        if let Some(severity) = item.cve.get_base_severity() {
-            msg.push_str(&format!("{} - {}\n", item.cve.id, severity));
-            continue;
-        }
-        
-        msg.push_str(&format!("{} - NO METRIC AVAILABLE\n", item.cve.id));
-    }
   
-    send_msg(&msg, params).await;
+    send_msg(&summarize_cpe_response(&result), params).await;
 
     true
 }
@@ -243,14 +252,7 @@ async fn new_cves(args: &Vec<&str>, params: &EventParams<'_>) -> bool {
             msg.push_str(&format!("Updated CVEs for the latest {} days:\n", days));
             for response in cpe_responses {
                 msg.push_str(&format!("{} :\n", response.0));
-                for item in response.1.vulnerabilities {
-                    if let Some(severity) = item.cve.get_base_severity() {
-                        msg.push_str(&format!("{} - {}\n", item.cve.id, severity));
-                        continue;
-                    }
-                    
-                    msg.push_str(&format!("{} - NO METRIC AVAILABLE\n", item.cve.id));
-                }
+                msg.push_str(&summarize_cpe_response(&response.1));
                 msg.push_str("\n");
             }
 
