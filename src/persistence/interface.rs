@@ -10,10 +10,15 @@ use serde::{Serialize, Deserialize};
 const DB_FILE_NAME: &str = "db.sqlite3";
 
 #[derive(Serialize, Deserialize)]
-#[allow(non_snake_case)]
 pub struct Subscription {
     pub user_id: u64,
     pub cpe: String
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct History {
+    pub user_id: u64,
+    pub command: String
 }
 
 fn get_db_path() -> String {
@@ -65,6 +70,36 @@ async fn get_subscriptions(user_id: u64) -> rusqlite::Result<Vec<Subscription>, 
     Ok(result)
 }
 
+async fn add_history_backend(user_id: u64, command: &str) -> rusqlite::Result<(), rusqlite::Error> {
+    let conn = get_db_connection().lock().await;
+
+    let query = "INSERT INTO history(userid, command) VALUES (?1, ?2)";
+    let mut stmt = conn.prepare_cached(query)?;
+    stmt.execute((user_id, command))?;
+
+    Ok(())
+}
+
+async fn get_history_backend(user_id: u64) -> rusqlite::Result<Vec<History>, rusqlite::Error> {
+    let conn = get_db_connection().lock().await;
+
+    let query = "SELECT * FROM history WHERE userid = ?1 ORDER BY id DESC LIMIT 10";
+    let mut stmt = conn.prepare_cached(query)?;
+    let result_iter = stmt.query_map((user_id,), |row| {
+        Ok(History {
+            user_id: row.get(1)?,
+            command: row.get(2)?
+        })
+    })?;
+
+    let mut result: Vec<History> = Vec::new();
+    for item in result_iter {
+        result.push(item?);
+    }
+
+    Ok(result)
+}
+
 pub async fn initialize_db() {
     let conn = get_db_connection().lock().await;
 
@@ -78,6 +113,17 @@ pub async fn initialize_db() {
     ) {
         panic!("Failed to create subscriptions table: {:?}", e);
     }
+
+    if let Err(e) = conn.execute(
+        "CREATE TABLE IF NOT EXISTS history (
+            id      INTEGER PRIMARY KEY,
+            userid    INTEGER NOT NULL,
+            command  TEXT
+        )",
+        (),
+    ) {
+        panic!("Failed to create history table: {:?}", e);
+    }
 }
 
 pub async fn add_subscription(cpe: &str, user_id: u64) -> Result<(), Box<dyn Error + Send>> {
@@ -90,6 +136,21 @@ pub async fn add_subscription(cpe: &str, user_id: u64) -> Result<(), Box<dyn Err
 
 pub async fn retrieve_subscriptions(user_id: u64) -> Result<String, Box<dyn Error + Send>> {
     let result = get_subscriptions(user_id).await;
+    if let Err(e) = result {
+        return Err(Box::new(IoError::new(ErrorKind::Other, format!("{}", e))));
+    }
+
+    Ok(serde_json::to_string(&result.unwrap()).unwrap())
+}
+
+pub async fn add_history(user_id: u64, command: &str) {
+    if let Err(e) = add_history_backend(user_id, command).await {
+        eprintln!("Failed to insert history to DB. Error: {:?}\nCommand: {}", e, command);
+    }
+}
+
+pub async fn get_history(user_id: u64) -> Result<String, Box<dyn Error + Send>> {
+    let result = get_history_backend(user_id).await;
     if let Err(e) = result {
         return Err(Box::new(IoError::new(ErrorKind::Other, format!("{}", e))));
     }

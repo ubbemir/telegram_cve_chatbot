@@ -94,6 +94,7 @@ async fn parse_user_input(line: &str, params: &EventParams<'_>) {
         "/subscriptions" => was_valid = subscriptions(params).await,
         "/new_cves" => was_valid = new_cves(&args, params).await,
         "/get_pdf" => was_valid = get_pdf(&args, params).await,
+        "/history" => was_valid = history(params).await,
         _ => {
             send_msg(&"Invalid command".to_owned(), params).await;
             was_valid = false;
@@ -101,7 +102,7 @@ async fn parse_user_input(line: &str, params: &EventParams<'_>) {
     };
 
     if was_valid {
-        println!("Valid command: {}", command);
+        logic::interface::add_history(params.user_id, line).await;
     }
 }
 
@@ -344,6 +345,30 @@ async fn get_pdf(args: &Vec<&str>, params: &EventParams<'_>) -> bool {
 
     true
 }
+
+async fn history(params: &EventParams<'_>) -> bool {
+    send_msg(&format!("Retrieving your command history ..."), params).await;
+
+    let result = logic::interface::get_history(params.user_id).await;
+
+    match result {
+        Ok(result) => {
+            let result: Vec<persistence::interface::History> = serde_json::from_str(&result).expect("Invalid JSON recieved from logic layer!");
+
+            let mut msg = String::new();
+            msg.push_str("Your command history:\n");
+            for item in result {
+                msg.push_str(&format!("{}\n", item.command));
+            }
+
+            send_msg(&msg, params).await;
+        },
+        Err(e) => send_msg(&format!("Failed to retrieve history from DB. Error: {}", e), params).await
+    }
+
+    true
+}
+
 
 async fn send_msg(msg: &str, params: &EventParams<'_>) {
     let send_message_params = SendMessageParams::builder()

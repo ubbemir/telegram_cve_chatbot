@@ -26,11 +26,11 @@ async fn root() -> Result<(), Box<dyn Error>> {
     let parsed_config: serde_json::Value = serde_json::from_str(&contents).expect(&format!("Invalid JSON in {}", &config_path));
     let token = parsed_config["token"].as_str().expect("Failed to extract bot token").to_owned().clone();
 
+    persistence::interface::initialize_db().await;
+
     let join_handle = tokio::spawn(async move {
         let _ = telegram::event_loop(&token).await;
     });
-
-    persistence::interface::initialize_db().await;
 
     let _ = join_handle.await;
 

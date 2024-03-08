@@ -86,3 +86,11 @@ pub async fn get_pdf(cpe: &str, id: u64) -> Result<String, Box<dyn Error + Send>
     let pdf_file = pdf_creator::generate_pdf(id, cpe, response)?;
     Ok(pdf_file)
 }
+
+pub async fn add_history(user_id: u64, command: &str) {
+    persistence::interface::add_history(user_id, command).await;
+}
+
+pub async fn get_history(user_id: u64) -> Result<String, Box<dyn Error + Send>> {
+    persistence::interface::get_history(user_id).await
+}
