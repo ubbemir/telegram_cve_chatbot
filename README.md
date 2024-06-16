@@ -15,7 +15,7 @@ Then run the project with the following command to generate necessary files (it 
 ```
 
 Copy "fonts" folder and "bot_config.json" to the directory of the executable 
-(default is /target/debug)
+(default is ./target/debug)
 
 In the executable directory create a folder named "cvss_charts" and another folder named "pdf"
 
