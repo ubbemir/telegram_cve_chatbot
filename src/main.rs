@@ -18,6 +18,16 @@ fn get_config_path() -> String {
     exe_path.to_str().unwrap().to_string()
 }
 
+fn create_dir_if_not_exists(dir_name: &str) -> std::io::Result<()> {
+    let mut path = env::current_exe().unwrap();
+    let _ = path.pop();
+    path.push(dir_name);
+
+    fs::create_dir_all(&path)?;
+
+    Ok(())
+}
+
 async fn root() -> Result<(), Box<dyn Error>> {
     let config_path = get_config_path();
     let contents = fs::read_to_string(&config_path)
@@ -25,6 +35,9 @@ async fn root() -> Result<(), Box<dyn Error>> {
 
     let parsed_config: serde_json::Value = serde_json::from_str(&contents).expect(&format!("Invalid JSON in {}", &config_path));
     let token = parsed_config["token"].as_str().expect("Failed to extract bot token").to_owned().clone();
+
+    create_dir_if_not_exists("cvss_charts").expect("Failed to create cvss_charts directory");
+    create_dir_if_not_exists("pdf").expect("Failed to create pdf directory");
 
     persistence::interface::initialize_db().await;
 
